@@ -93,29 +93,39 @@ void laser_callback(const sensor_msgs::LaserScan::ConstPtr& scan_msg)
 {
     // Read and process laser scan values
     laser_msg = *scan_msg;
+    // declare an array of float values to keep track of the laser measurements
     std::vector<float> laser_ranges;
+    // important note: array of laser range values is filled from right to left (CCW)
+    // according to rostopic list 45*16 = 720 individual laser rays are published 
     laser_ranges = laser_msg.ranges;
     size_t range_size = laser_ranges.size();
+    ROS_INFO_ONCE("Number of laser rays: [%d]", range_size);
     float left_side = 0.0, right_side = 0.0;
+
     float range_min = laser_msg.range_max, range_max = laser_msg.range_min;
     int nan_count = 0;
+    // cycle trough all laser range rays
     for (size_t i = 0; i < range_size; i++) {
+        // get the smallest (closest) laser range value
         if (laser_ranges[i] < range_min) {
             range_min = laser_ranges[i];
         }
 
+        // count the number of 'inf' readings
         if (std::isnan(laser_ranges[i])) {
             nan_count++;
         }
+        // get the highest (farest) laser range value to the right side
         if (i < range_size / 4) {
             if (laser_ranges[i] > range_max) {
                 range_max = laser_ranges[i];
             }
         }
-
+        // add all laser range values of readings to the front-left and left side 
         if (i > range_size / 2) {
             left_side += laser_ranges[i];
         }
+        // add all laser range values of readings to the front-right and right side
         else {
             right_side += laser_ranges[i];
         }
@@ -137,6 +147,8 @@ void laser_callback(const sensor_msgs::LaserScan::ConstPtr& scan_msg)
             crashed = false;
             robot_move(STOP);
 
+            
+            // check if there is more free space to the left than to the right
             if (left_side >= right_side) {
                 robot_move(TURN_LEFT); // robot_move(TURN_RIGHT);
             }
