@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- change according to the laser scanner topic and velocity command topic in use -->
+  <arg name="scan_topic" default="dumpster/laser/scan"/> <!-- set what the laser scan topic is -->
+  <arg name="robot_actuation_topic" default="cmd_vel"/> <!-- set what the geometry_msgs::Twist topic is -->
+
+    <node pkg="wall_follower" type="follow_wall.py" name="wall_follower_py_node" output="screen">
+      <remap from="scan" to="$(arg scan_topic)"/>
+      <remap from="cmd_vel" to="$(arg robot_actuation_topic)"/>
+    </node>
+
+</launch>
