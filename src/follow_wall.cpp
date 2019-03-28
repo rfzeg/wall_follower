@@ -14,6 +14,8 @@ sensor_msgs::LaserScan laser_msg;
 
 // global array to keep track of the min. distance value on each zone
 float zone[5];
+// global varible to keep the state of the environment surroundings
+int state;
 
 // The laser_callback function is called each time laser scan data is received
 void laser_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
@@ -83,21 +85,62 @@ void laser_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
   // ROS_INFO("Closest object to the far left: [%f]: ", zone[4]);
 }
 
+/*
+determine the state of the environment surroundings
+and the logic used to drive the robot
+*/
+void drive_logic() {
+  float linear_x = 0;
+  float angular_z = 0;
+  int state;
+  // fine tune distance (mt) used to consider a region as blocked by an obstacle
+  int d = 2.0;
+
+  if (zone[2] > d && zone[3] > d && zone[1] > d) {
+    ROS_INFO("case 1 - nothing");
+    state = 0;
+  } else if (zone[2] < d && zone[3] > d && zone[1] > d) {
+    ROS_INFO("case 2 - front");
+    state = 1;
+  } else if (zone[2] > d && zone[3] > d && zone[1] < d) {
+    ROS_INFO("case 3 - front-right");
+    state = 2;
+  } else if (zone[2] > d && zone[3] < d && zone[1] > d) {
+    ROS_INFO("case 4 - front-left");
+    state = 0;
+  } else if (zone[2] < d && zone[3] > d && zone[1] < d) {
+    ROS_INFO("case 5 - front and front-right");
+    state = 1;
+  } else if (zone[2] < d && zone[3] < d && zone[1] > d) {
+    ROS_INFO("case 6 - front and front-left");
+    state = 1;
+  } else if (zone[2] < d && zone[3] < d && zone[1] < d) {
+    ROS_INFO("case 7 - front, front-left and front-right");
+    state = 1;
+  } else if (zone[2] > d && zone[3] < d && zone[1] < d) {
+    ROS_INFO("case 8 - front-left and front-right");
+    state = 0;
+  } else {
+    ROS_INFO("Unknown case");
+  }
+}
+
 int main(int argc, char **argv) {
-  // Initialize a ROS node
-  ros::init(argc, argv,
-            "follow_wall_commands"); // changed node name if required
+  // Initialize a ROS node, change name if required
+  ros::init(argc, argv, "follow_wall_commands");
 
   // Create a ROS NodeHandle object
   ros::NodeHandle n;
 
   // Subscribe to the /scan topic and call the laser_callback function
-  laser_subscriber = n.subscribe(
-      "/scan", 1000, laser_callback); // node subscribes to "scan" topic
+  laser_subscriber = n.subscribe("/scan", 1000, laser_callback);
   ROS_INFO_ONCE("Hello World! Follow Wall Customized Version!");
   // Loop, the laser_callback function is called when new laser messages arrives
   while (ros::ok()) {
     ros::spinOnce();
+    // take action: determine the state of the environment surroundings
+    // and the logic used to drive the robot
+    drive_logic();
   }
 
   return 0;
