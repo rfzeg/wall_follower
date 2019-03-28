@@ -1,20 +1,25 @@
 /*
-Follow Wall Algorithm
+Basic Follow Wall Algorithm
 Author: Roberto Zegers
 Date: 2019-March-27
 */
 
 // ROS Libraries
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h" // Laser Data
+#include <ros/ros.h>
+#include <sensor_msgs/LaserScan.h> // Laser Data
+#include <geometry_msgs/Twist.h> // Motor Commands
 
-// ROS Subscriber:Laser Data, and Messages:Laser Messages
+// ROS Subscriber for laser data and messages type (LaserScan)
 ros::Subscriber laser_subscriber;
 sensor_msgs::LaserScan laser_msg;
 
+// ROS Publisher for motor commands and message type (Twist)
+ros::Publisher motor_command_publisher;
+geometry_msgs::Twist motor_command;
+
 // global array to keep track of the min. distance value on each zone
 float zone[5];
-// global varible to keep the state of the environment surroundings
+// global variable used to set the robots's driving logic
 int state;
 
 // The laser_callback function is called each time laser scan data is received
@@ -28,7 +33,7 @@ void laser_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
   laser_rays = laser_msg.ranges;
   // the total number of laser rays the laser range finder has
   size_t range_size = laser_rays.size();
-  ROS_INFO_ONCE("Number of laser rays: [%lu]", range_size); // for debugging
+  ROS_INFO_ONCE("Number of laser rays: [%zu]", range_size); // for debugging
   // variables to store closest (min) distance values on each zone
   zone[0] = laser_msg.range_max;
   zone[1] = laser_msg.range_max;
@@ -86,9 +91,32 @@ void laser_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
 }
 
 /*
-determine the state of the environment surroundings
-and the logic used to drive the robot
+Detemine velocity commands for each state and fill in a Twist message
 */
+
+void robot_move(geometry_msgs::Twist &motor_command) {
+  // ROS_INFO("Wall follower state: [%d]", state);
+  switch (state) {
+  case 0:
+    // Find a wall: turn CW (right) while moving ahead
+    motor_command.linear.x = 0.15;
+    motor_command.angular.z = -0.15;
+    break;
+
+  case 1:
+    // Turn left
+    motor_command.linear.x = 0.0;
+    motor_command.angular.z = 0.2;
+    break;
+
+  case 2:
+    // Follow the wall: keep moving straight ahead
+    motor_command.angular.z = 0.0;
+    motor_command.linear.x = 0.15;
+    break;
+  }
+}
+
 void drive_logic() {
   float linear_x = 0;
   float angular_z = 0;
@@ -132,16 +160,25 @@ int main(int argc, char **argv) {
   // Create a ROS NodeHandle object
   ros::NodeHandle n;
 
+  // Inform ROS master that we will be publishing a message of type
+  // geometry_msgs::Twist on the robot actuation topic with a publishing queue
+  // size of 100
+  motor_command_publisher = n.advertise<geometry_msgs::Twist>("/cmd_vel", 100);
+
   // Subscribe to the /scan topic and call the laser_callback function
   laser_subscriber = n.subscribe("/scan", 1000, laser_callback);
   ROS_INFO_ONCE("Hello World! Follow Wall Customized Version!");
   // Loop, the laser_callback function is called when new laser messages arrives
   while (ros::ok()) {
-    ros::spinOnce();
+    ros::spinOnce(); // call all the callbacks waiting to be called
     // take action: determine the state of the environment surroundings
-    // and the logic used to drive the robot
+    // and set the logic used to drive the robot
     drive_logic();
+    // Fill in motor command message and publish it
+    robot_move(motor_command);
+    // Publish motor commands to the robot and wait 10ms
+    motor_command_publisher.publish(motor_command);
+    usleep(10);
   }
-
   return 0;
 }
