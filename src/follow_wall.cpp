@@ -117,36 +117,37 @@ void robot_move(geometry_msgs::Twist &motor_command) {
   }
 }
 
+/*
+Determine the state of the environment surroundings
+and the logic used to drive the robot (using 3 zones)
+*/
 void drive_logic() {
-  float linear_x = 0;
-  float angular_z = 0;
-  int state;
   // fine tune distance (mt) used to consider a region as blocked by an obstacle
-  int d = 2.0;
+  float d = 0.5;
 
-  if (zone[2] > d && zone[3] > d && zone[1] > d) {
-    ROS_INFO("case 1 - nothing");
-    state = 0;
-  } else if (zone[2] < d && zone[3] > d && zone[1] > d) {
-    ROS_INFO("case 2 - front");
+  if (zone[1] > d && zone[2] > d && zone[3] > d) {
+    ROS_INFO("case 1: no obstacles detected");
+    state = 0; // set the driving logic
+  } else if (zone[1] > d && zone[2] < d && zone[3] > d) {
+    ROS_INFO("case 2: obstacle only in front zone");
     state = 1;
-  } else if (zone[2] > d && zone[3] > d && zone[1] < d) {
-    ROS_INFO("case 3 - front-right");
+  } else if (zone[1] < d && zone[2] > d && zone[3] > d) {
+    ROS_INFO("case 3: obstacle only in front-right zone");
     state = 2;
-  } else if (zone[2] > d && zone[3] < d && zone[1] > d) {
-    ROS_INFO("case 4 - front-left");
+  } else if (zone[1] > d && zone[2] > d && zone[3] < d) {
+    ROS_INFO("case 4: obstacle only in front-left zone");
     state = 0;
-  } else if (zone[2] < d && zone[3] > d && zone[1] < d) {
-    ROS_INFO("case 5 - front and front-right");
+  } else if (zone[1] < d && zone[2] < d && zone[3] > d) {
+    ROS_INFO("case 5: obstacle in front-right and front zone");
     state = 1;
-  } else if (zone[2] < d && zone[3] < d && zone[1] > d) {
-    ROS_INFO("case 6 - front and front-left");
+  } else if (zone[1] > d && zone[2] < d && zone[3] < d) {
+    ROS_INFO("case 6: obstacle in front and front-left zone");
     state = 1;
-  } else if (zone[2] < d && zone[3] < d && zone[1] < d) {
-    ROS_INFO("case 7 - front, front-left and front-right");
+  } else if (zone[1] < d && zone[2] < d && zone[3] < d) {
+    ROS_INFO("case 7: obstacle in front-right, front and front-left zone");
     state = 1;
-  } else if (zone[2] > d && zone[3] < d && zone[1] < d) {
-    ROS_INFO("case 8 - front-left and front-right");
+  } else if (zone[1] < d && zone[2] > d && zone[3] < d) {
+    ROS_INFO("case 8: obstacle in front-right and front-left zone");
     state = 0;
   } else {
     ROS_INFO("Unknown case");
