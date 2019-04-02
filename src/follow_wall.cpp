@@ -18,7 +18,7 @@ ros::Publisher motor_command_publisher;
 geometry_msgs::Twist motor_command;
 
 // global array to keep track of the min. distance value on each zone
-float zone[5];
+float z[5];
 // global variable used to set the robots's driving logic
 int state;
 
@@ -35,11 +35,11 @@ void laser_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
   size_t range_size = laser_rays.size();
   ROS_INFO_ONCE("Number of laser rays: [%zu]", range_size); // for debugging
   // variables to store closest (min) distance values on each zone
-  zone[0] = laser_msg.range_max;
-  zone[1] = laser_msg.range_max;
-  zone[2] = laser_msg.range_max;
-  zone[3] = laser_msg.range_max;
-  zone[4] = laser_msg.range_max;
+  z[0] = laser_msg.range_max;
+  z[1] = laser_msg.range_max;
+  z[2] = laser_msg.range_max;
+  z[3] = laser_msg.range_max;
+  z[4] = laser_msg.range_max;
 
   float range_max = laser_msg.range_min;
   // cycle trough all laser range rays
@@ -48,46 +48,46 @@ void laser_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
     // rays < 144, laser rays to the far right side
     if (i < range_size / 5) {
       // get the smallest (closest) laser range value
-      if (laser_rays[i] < zone[0]) {
-        zone[0] = laser_rays[i];
+      if (laser_rays[i] < z[0]) {
+        z[0] = laser_rays[i];
       }
     }
     // rays >= 144 and rays < 288, laser rays to the front-right side
     else if (i >= range_size / 5 && i < range_size * 2 / 5) {
       // get the smallest (closest) laser range value
-      if (laser_rays[i] < zone[1]) {
-        zone[1] = laser_rays[i];
+      if (laser_rays[i] < z[1]) {
+        z[1] = laser_rays[i];
       }
     }
     // rays >= 288 and rays < 432, laser rays to the front
     else if (i >= range_size * 2 / 5 && i < range_size * 3 / 5) {
       // get the smallest (closest) laser range value
-      if (laser_rays[i] < zone[2]) {
-        zone[2] = laser_rays[i];
+      if (laser_rays[i] < z[2]) {
+        z[2] = laser_rays[i];
       }
     }
     // rays >= 432 and rays < 576, laser rays to the front-left side
     else if (i >= range_size * 3 / 5 && i < range_size * 4 / 5) {
       // get the smallest (closest) laser range value
-      if (laser_rays[i] < zone[3]) {
-        zone[3] = laser_rays[i];
+      if (laser_rays[i] < z[3]) {
+        z[3] = laser_rays[i];
       }
     }
     // rays > 576 and rays <= 720, laser rays to the far left side
     else if (i >= range_size * 4 / 5 && i <= range_size) {
       // get the smallest (closest) laser range value
-      if (laser_rays[i] < zone[4]) {
-        zone[4] = laser_rays[i];
+      if (laser_rays[i] < z[4]) {
+        z[4] = laser_rays[i];
       }
     } else {
       ROS_ERROR("Ray index not found in range size");
     }
   } // end of for
-  // ROS_INFO("Closest object to the far right: [%f]: ", zone[0]);
-  // ROS_INFO("Closest object to the front-right: [%f]: ", zone[1]);
-  // ROS_INFO("Closest object to the front: [%f]: ", zone[2]);
-  // ROS_INFO("Closest object to the front-left: [%f]: ", zone[3]);
-  // ROS_INFO("Closest object to the far left: [%f]: ", zone[4]);
+  // ROS_INFO("Closest object to the far right: [%f]: ", z[0]);
+  // ROS_INFO("Closest object to the front-right: [%f]: ", z[1]);
+  // ROS_INFO("Closest object to the front: [%f]: ", z[2]);
+  // ROS_INFO("Closest object to the front-left: [%f]: ", z[3]);
+  // ROS_INFO("Closest object to the far left: [%f]: ", z[4]);
 }
 
 /*
@@ -125,28 +125,28 @@ void drive_logic() {
   // fine tune distance (mt) used to consider a region as blocked by an obstacle
   float d = 0.5;
 
-  if (zone[1] > d && zone[2] > d && zone[3] > d) {
+  if (z[1] > d && z[2] > d && z[3] > d) {
     ROS_INFO("case 1: no obstacles detected");
     state = 0; // set the driving logic
-  } else if (zone[1] > d && zone[2] < d && zone[3] > d) {
+  } else if (z[1] > d && z[2] < d && z[3] > d) {
     ROS_INFO("case 2: obstacle only in front zone");
     state = 1;
-  } else if (zone[1] < d && zone[2] > d && zone[3] > d) {
+  } else if (z[1] < d && z[2] > d && z[3] > d) {
     ROS_INFO("case 3: obstacle only in front-right zone");
     state = 2;
-  } else if (zone[1] > d && zone[2] > d && zone[3] < d) {
+  } else if (z[1] > d && z[2] > d && z[3] < d) {
     ROS_INFO("case 4: obstacle only in front-left zone");
     state = 0;
-  } else if (zone[1] < d && zone[2] < d && zone[3] > d) {
+  } else if (z[1] < d && z[2] < d && z[3] > d) {
     ROS_INFO("case 5: obstacle in front-right and front zone");
     state = 1;
-  } else if (zone[1] > d && zone[2] < d && zone[3] < d) {
+  } else if (z[1] > d && z[2] < d && z[3] < d) {
     ROS_INFO("case 6: obstacle in front and front-left zone");
     state = 1;
-  } else if (zone[1] < d && zone[2] < d && zone[3] < d) {
+  } else if (z[1] < d && z[2] < d && z[3] < d) {
     ROS_INFO("case 7: obstacle in front-right, front and front-left zone");
     state = 1;
-  } else if (zone[1] < d && zone[2] > d && zone[3] < d) {
+  } else if (z[1] < d && z[2] > d && z[3] < d) {
     ROS_INFO("case 8: obstacle in front-right and front-left zone");
     state = 0;
   } else {
