@@ -17,7 +17,7 @@ from std_srvs.srv import *
 import math
 
 active_ = False
-pub_ = None
+pub_ = None # defining a global publisher
 regions_ = {
         'right': 0,
         'fright': 0,
@@ -25,6 +25,7 @@ regions_ = {
         'fleft': 0,
         'left': 0,
 }
+# state variable and state dictionary
 state_ = 0
 state_dict_ = {
     0: 'find the wall',
@@ -42,6 +43,8 @@ def wall_follower_switch(req):
 
 def clbk_laser(msg):
     global regions_
+    # read the minimum values of each region
+    # a second min is required to filter out 'inf' values, in that case 10 is used 
     regions_ = {
         'right':  min(min(msg.ranges[0:143]), 10),
         'fright': min(min(msg.ranges[144:287]), 10),
@@ -242,7 +245,7 @@ def reverse_left():
     return twistmsg
 
 def main():
-    global pub_, active_
+    global pub_, active_ # to use this global variables inside main()
     
     rospy.init_node('reading_laser')
     
